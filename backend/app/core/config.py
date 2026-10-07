@@ -20,8 +20,14 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
 
     jwt_secret: str = DEV_JWT_SECRET
+    jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 7
+    # 12 rounds is ~250 ms per hash: slow for attackers, fine for one login. Tests lower it.
+    bcrypt_rounds: int = Field(default=12, ge=4, le=16)
+
+    login_max_failed_attempts: int = 5
+    login_lockout_seconds: int = 15 * 60
 
     # NoDecode lets us accept a plain comma-separated string instead of JSON.
     cors_origins: Annotated[list[str], NoDecode] = Field(

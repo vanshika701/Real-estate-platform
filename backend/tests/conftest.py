@@ -6,6 +6,7 @@ os.environ.setdefault(
 )
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/15")
 os.environ["APP_ENV"] = "test"
+os.environ["BCRYPT_ROUNDS"] = "4"  # minimum cost: hashing stays real but tests stay fast
 
 from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
@@ -18,6 +19,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import SessionLocal, engine
+from app.core.redis import redis_client
 from app.main import app
 from app.models import Base
 
@@ -34,14 +36,20 @@ def database_schema() -> Iterator[None]:
     yield
 
 
+@pytest.fixture(autouse=True)
+async def clean_state() -> AsyncIterator[None]:
+    """Every test starts with empty tables and an empty Redis DB."""
+    yield
+    tables = ", ".join(t.name for t in Base.metadata.sorted_tables)
+    async with engine.begin() as conn:
+        await conn.execute(text(f"TRUNCATE {tables} RESTART IDENTITY CASCADE"))
+    await redis_client.flushdb()
+
+
 @pytest.fixture
 async def db_session() -> AsyncIterator[AsyncSession]:
     async with SessionLocal() as session:
         yield session
-    # Wipe data between tests so each one starts from an empty schema.
-    tables = ", ".join(t.name for t in Base.metadata.sorted_tables)
-    async with engine.begin() as conn:
-        await conn.execute(text(f"TRUNCATE {tables} RESTART IDENTITY CASCADE"))
 
 
 @pytest.fixture
