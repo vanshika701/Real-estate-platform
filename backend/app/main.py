@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.api.routers import agent, auth, bookings, health, listings, slots
+from app.api.routers import agent, auth, bookings, health, listings, slots, ws
 from app.core.config import get_settings
 from app.core.database import engine
 from app.core.errors import register_error_handlers
@@ -58,6 +58,7 @@ def create_app() -> FastAPI:
         slots.router,
         bookings.router,
         agent.router,
+        ws.router,
     )
     for router in routers:
         app.include_router(router, prefix=API_PREFIX)

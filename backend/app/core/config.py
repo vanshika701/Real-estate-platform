@@ -48,6 +48,9 @@ class Settings(BaseSettings):
     supabase_bucket: str = "listing-images"
     resend_api_key: str | None = None
     email_from: str = "PropVisit <noreply@propvisit.dev>"
+    email_queue_name: str = "emails"
+    # Public frontend URL, used for links inside emails.
+    app_url: str = "http://localhost:5173"
 
     @model_validator(mode="before")
     @classmethod

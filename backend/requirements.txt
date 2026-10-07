@@ -11,3 +11,4 @@ python-jose[cryptography]==3.5.0
 email-validator==2.3.0
 python-multipart==0.0.32
 httpx==0.28.1
+rq==2.12.0

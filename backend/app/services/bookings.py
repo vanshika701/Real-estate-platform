@@ -16,6 +16,7 @@ from app.schemas.bookings import (
     BookingCreate,
     BookingResponse,
 )
+from app.services.notifications import BookingNotifier
 from app.services.slot_holds import SlotHoldStore
 
 logger = structlog.get_logger(__name__)
@@ -24,9 +25,12 @@ ACTIVE_BOOKING_INDEX = "uq_bookings_active_slot"
 
 
 class BookingService:
-    def __init__(self, session: AsyncSession, holds: SlotHoldStore) -> None:
+    def __init__(
+        self, session: AsyncSession, holds: SlotHoldStore, notifier: BookingNotifier
+    ) -> None:
         self.session = session
         self.holds = holds
+        self.notifier = notifier
         self.bookings = BookingRepository(session)
         self.listings = ListingRepository(session)
         self.slots = SlotRepository(session)
@@ -70,7 +74,11 @@ class BookingService:
         # 3. The hold has done its job. Compare-and-delete, so we only remove our own.
         await self.holds.release(listing.id, slot.slot_start, buyer.id)
         logger.info("booking_created", booking_id=booking.id, listing_id=listing.id)
-        return BookingResponse.model_validate(await self._load(booking.id))
+
+        # 4. Tell the agent live and queue both emails; never fails the request.
+        saved = await self._load(booking.id)
+        await self.notifier.booking_created(saved)
+        return BookingResponse.model_validate(saved)
 
     async def list_mine(self, buyer: User) -> list[BookingResponse]:
         bookings = await self.bookings.list_for_buyer(buyer.id)
@@ -94,7 +102,9 @@ class BookingService:
             )
         await self.session.commit()
         logger.info("booking_cancelled", booking_id=booking.id)
-        return BookingResponse.model_validate(await self._load(booking.id))
+        saved = await self._load(booking.id)
+        await self.notifier.booking_cancelled(saved)
+        return BookingResponse.model_validate(saved)
 
     # --- agent ----------------------------------------------------------------------------
 

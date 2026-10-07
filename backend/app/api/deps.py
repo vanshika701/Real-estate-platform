@@ -6,9 +6,13 @@ from fastapi import Depends
 
 from app.core.config import get_settings
 from app.core.dependencies import DbSession, RedisClient
+from app.core.redis import get_sync_redis
+from app.services.agent_events import AgentEventPublisher
 from app.services.bookings import BookingService
+from app.services.email_queue import EmailQueue
 from app.services.image_storage import get_image_storage
 from app.services.listings import ListingService
+from app.services.notifications import BookingNotifier
 from app.services.search_cache import SearchCache
 from app.services.slot_holds import SlotHoldStore
 from app.services.slots import SlotService
@@ -31,8 +35,19 @@ def get_slot_service(session: DbSession, holds: HoldStoreDep) -> SlotService:
     return SlotService(session, holds)
 
 
-def get_booking_service(session: DbSession, holds: HoldStoreDep) -> BookingService:
-    return BookingService(session, holds)
+def get_booking_notifier(redis: RedisClient) -> BookingNotifier:
+    settings = get_settings()
+    return BookingNotifier(
+        EmailQueue(get_sync_redis(), settings.email_queue_name), AgentEventPublisher(redis)
+    )
+
+
+def get_booking_service(
+    session: DbSession,
+    holds: HoldStoreDep,
+    notifier: Annotated[BookingNotifier, Depends(get_booking_notifier)],
+) -> BookingService:
+    return BookingService(session, holds, notifier)
 
 
 ListingServiceDep = Annotated[ListingService, Depends(get_listing_service)]

@@ -1,3 +1,6 @@
+from functools import cache
+
+from redis import Redis as SyncRedis
 from redis.asyncio import Redis
 
 from app.core.config import get_settings
@@ -8,3 +11,10 @@ redis_client: Redis = Redis.from_url(get_settings().redis_url, decode_responses=
 
 async def get_redis() -> Redis:
     return redis_client
+
+
+@cache
+def get_sync_redis() -> SyncRedis:
+    """Blocking client for RQ, which doesn't support asyncio. RQ stores pickled bytes, so
+    responses must not be decoded."""
+    return SyncRedis.from_url(get_settings().redis_url)

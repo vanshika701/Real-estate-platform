@@ -34,7 +34,9 @@ class BookingRepository:
 
     @staticmethod
     def _with_details() -> Select[tuple[Booking]]:
-        return select(Booking).options(joinedload(Booking.listing), joinedload(Booking.buyer))
+        return select(Booking).options(
+            joinedload(Booking.listing).joinedload(Listing.agent), joinedload(Booking.buyer)
+        )
 
     async def get_detailed(self, booking_id: int) -> Booking | None:
         return await self.session.scalar(

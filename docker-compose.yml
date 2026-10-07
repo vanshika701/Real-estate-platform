@@ -56,6 +56,27 @@ services:
       redis:
         condition: service_healthy
 
+  worker:
+    # Same image as the backend, different process: sends queued emails outside the request.
+    build: ./backend
+    command: ["python", "-m", "app.workers.run"]
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      REDIS_URL: redis://redis:6379/0
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-PropVisit <noreply@propvisit.dev>}
+    healthcheck:
+      # Healthy once the worker has registered itself in Redis.
+      test: ["CMD", "python", "-c", "import sys; from rq import Worker; from app.core.redis import get_sync_redis; sys.exit(0 if Worker.all(connection=get_sync_redis()) else 1)"]
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 5
+    depends_on:
+      redis:
+        condition: service_healthy
+
   frontend:
     build: ./frontend
     ports:
