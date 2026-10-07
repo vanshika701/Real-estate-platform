@@ -13,6 +13,7 @@ from app.schemas.bookings import (
     AgentBookingDecision,
     AgentBookingPage,
     AgentBookingResponse,
+    AgentStats,
     BookingCreate,
     BookingResponse,
 )
@@ -117,6 +118,15 @@ class BookingService:
             total=total,
             page=page,
             page_size=page_size,
+        )
+
+    async def stats(self, agent: User) -> AgentStats:
+        return AgentStats(
+            active_listings=await self.listings.count_for_agent(agent.id, ListingStatus.ACTIVE),
+            pending_requests=await self.bookings.count_for_agent(agent.id, BookingStatus.PENDING),
+            upcoming_visits=await self.bookings.count_for_agent(
+                agent.id, BookingStatus.ACCEPTED, after=datetime.now(UTC)
+            ),
         )
 
     async def decide(

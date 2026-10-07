@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 
 import { ApiError } from "../api/client";
 import { ImageGallery } from "../components/ImageGallery";
+import { SlotPicker } from "../components/SlotPicker";
 import { EmptyState, ErrorState, PageSpinner, Spinner } from "../components/States";
 import { useListing } from "../hooks/useListings";
 import { bhkLabel, formatArea, formatPriceFull, formatPriceShort, propertyTypeLabel } from "../lib/format";
@@ -111,12 +112,9 @@ export function ListingDetailPage() {
               Book a site visit
             </h2>
             <p className="mt-1 text-sm text-slate-600">
-              Pick a time the agent has opened and hold it for 5 minutes while you confirm.
+              Pick a time and it&apos;s held for you for 5 minutes while you confirm.
             </p>
-            {/* Slot picker with hold countdown arrives in Phase 8. */}
-            <div data-slot="visit-picker" className="mt-4 rounded-lg bg-slate-50 p-4 text-sm text-slate-500">
-              Visit slots will appear here.
-            </div>
+            <SlotPicker listingId={listing.id} acceptingVisits={listing.status === "active"} />
           </section>
 
           <section aria-labelledby="agent-heading" className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">

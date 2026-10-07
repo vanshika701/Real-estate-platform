@@ -51,6 +51,12 @@ class AgentBookingResponse(BookingResponse):
     buyer: BuyerContact
 
 
+class AgentStats(BaseModel):
+    active_listings: int
+    pending_requests: int
+    upcoming_visits: int = Field(description="Accepted visits that haven't happened yet")
+
+
 class AgentBookingPage(BaseModel):
     items: list[AgentBookingResponse]
     total: int

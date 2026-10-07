@@ -73,6 +73,19 @@ class BookingRepository:
         )
         return list(rows), total or 0
 
+    async def count_for_agent(
+        self, agent_id: int, status: BookingStatus, after: datetime | None = None
+    ) -> int:
+        query = (
+            select(func.count())
+            .select_from(Booking)
+            .join(Listing)
+            .where(Listing.agent_id == agent_id, Booking.status == status)
+        )
+        if after is not None:
+            query = query.where(Booking.slot_start > after)
+        return await self.session.scalar(query) or 0
+
     async def transition(
         self, booking_id: int, allowed_from: Iterable[BookingStatus], to: BookingStatus
     ) -> bool:

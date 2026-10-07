@@ -114,3 +114,79 @@ export interface ListingFilters {
   page?: number;
   page_size?: number;
 }
+
+export interface ListingInput {
+  title: string;
+  description: string;
+  city: string;
+  locality: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  price: number;
+  bhk: number;
+  area_sqft: number;
+  property_type: PropertyType;
+  status?: ListingStatus;
+}
+
+// --- slots & holds ---
+
+export type SlotStatus = "available" | "held" | "booked";
+
+export interface Slot {
+  id: number;
+  slot_start: string;
+  slot_end: string;
+  status: SlotStatus;
+}
+
+export interface SlotInput {
+  slot_start: string;
+  slot_end: string;
+}
+
+export interface Hold {
+  listing_id: number;
+  slot_start: string;
+  expires_at: string;
+  /** Seconds left on the hold when the server responded. */
+  expires_in: number;
+}
+
+// --- bookings ---
+
+export type BookingStatus = "pending" | "accepted" | "rejected" | "cancelled";
+
+export interface BookingListing {
+  id: number;
+  title: string;
+  city: string;
+  locality: string;
+  address: string;
+}
+
+export interface Booking {
+  id: number;
+  listing_id: number;
+  slot_start: string;
+  status: BookingStatus;
+  note: string | null;
+  created_at: string;
+  listing: BookingListing;
+}
+
+export interface AgentBooking extends Booking {
+  buyer: AgentContact;
+}
+
+export interface AgentStats {
+  active_listings: number;
+  pending_requests: number;
+  upcoming_visits: number;
+}
+
+export type AgentEvent =
+  | { type: "booking.created"; booking: AgentBooking }
+  | { type: "booking.cancelled"; booking: AgentBooking }
+  | { type: "ping" };

@@ -85,6 +85,12 @@ class ListingRepository:
             page_size,
         )
 
+    async def count_for_agent(self, agent_id: int, status: ListingStatus) -> int:
+        count = await self.session.scalar(
+            select(func.count()).where(Listing.agent_id == agent_id, Listing.status == status)
+        )
+        return count or 0
+
     async def get(self, listing_id: int) -> Listing | None:
         return await self.session.get(Listing, listing_id)
 

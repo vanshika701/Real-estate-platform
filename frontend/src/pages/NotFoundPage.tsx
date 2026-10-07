@@ -17,12 +17,3 @@ export function NotFoundPage() {
     </div>
   );
 }
-
-/** Stand-in for screens built in the next phase, so routes and role guards already work. */
-export function ComingSoonPage({ title }: { title: string }) {
-  return (
-    <div className="mx-auto max-w-3xl px-4 py-16">
-      <EmptyState title={title} description="This screen is being built next." />
-    </div>
-  );
-}

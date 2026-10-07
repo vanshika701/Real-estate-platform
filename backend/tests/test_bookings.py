@@ -369,3 +369,26 @@ async def test_buyers_cannot_use_agent_endpoints(client: AsyncClient, world: Wor
     response = await client.get("/api/v1/agent/bookings", headers=auth_headers(world.buyer))
 
     assert response.status_code == 403
+
+
+async def test_agent_stats_count_only_own_relevant_items(
+    client: AsyncClient, world: World, db_session: AsyncSession
+) -> None:
+    from app.models import ListingStatus
+
+    await make_listing(db_session, world.agent, status=ListingStatus.SOLD)
+    await make_booking(db_session, world.listing, world.buyer, world.slot_start)  # pending
+    upcoming = future_slot_start(days=2)
+    await make_booking(
+        db_session, world.listing, world.other_buyer, upcoming, BookingStatus.ACCEPTED
+    )
+    past = datetime.now(UTC) - timedelta(days=2)
+    await make_booking(db_session, world.listing, world.buyer, past, BookingStatus.ACCEPTED)
+    other_agent = await make_user(db_session, UserRole.AGENT)
+    other_listing = await make_listing(db_session, other_agent)
+    await make_booking(db_session, other_listing, world.buyer, world.slot_start)
+
+    response = await client.get("/api/v1/agent/stats", headers=auth_headers(world.agent))
+
+    assert response.status_code == 200
+    assert response.json() == {"active_listings": 1, "pending_requests": 1, "upcoming_visits": 1}

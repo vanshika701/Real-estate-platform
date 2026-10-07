@@ -34,6 +34,8 @@ export interface RequestOptions {
   body?: unknown;
   /** Send the access token (and refresh it if expired). */
   auth?: boolean;
+  /** Let the request finish even if the page is closing (used to release holds). */
+  keepalive?: boolean;
 }
 
 function buildUrl(path: string, query?: Query): string {
@@ -57,7 +59,12 @@ async function send(path: string, options: RequestOptions): Promise<Response> {
   const token = options.auth ? tokenStore.getAccessToken() : null;
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  return fetch(buildUrl(path, options.query), { method: options.method ?? "GET", headers, body });
+  return fetch(buildUrl(path, options.query), {
+    method: options.method ?? "GET",
+    headers,
+    body,
+    keepalive: options.keepalive,
+  });
 }
 
 async function toError(response: Response): Promise<ApiError> {

@@ -5,7 +5,12 @@ from fastapi import APIRouter, Query
 from app.api.deps import BookingServiceDep, ListingServiceDep
 from app.core.dependencies import AgentUser
 from app.models import BookingStatus
-from app.schemas.bookings import AgentBookingDecision, AgentBookingPage, AgentBookingResponse
+from app.schemas.bookings import (
+    AgentBookingDecision,
+    AgentBookingPage,
+    AgentBookingResponse,
+    AgentStats,
+)
 from app.schemas.listings import MAX_PAGE_SIZE, ListingPage
 
 router = APIRouter(prefix="/agent", tags=["agent"])
@@ -40,3 +45,9 @@ async def decide_booking(
 ) -> AgentBookingResponse:
     """Accept or reject a pending visit request."""
     return await service.decide(agent, booking_id, data)
+
+
+@router.get("/stats", response_model=AgentStats)
+async def dashboard_stats(agent: AgentUser, service: BookingServiceDep) -> AgentStats:
+    """Headline numbers for the agent dashboard."""
+    return await service.stats(agent)
