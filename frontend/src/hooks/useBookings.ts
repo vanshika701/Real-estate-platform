@@ -16,10 +16,11 @@ export const slotKeys = {
   forListing: (listingId: number) => ["slots", listingId] as const,
 };
 
-export function useSlots(listingId: number) {
+export function useSlots(listingId: number, enabled = true) {
   return useQuery({
     queryKey: slotKeys.forListing(listingId),
     queryFn: () => slotsApi.list(listingId),
+    enabled,
     // Other buyers hold and book slots too; poll so the picker doesn't go stale.
     refetchInterval: 20_000,
   });

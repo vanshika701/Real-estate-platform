@@ -41,7 +41,7 @@ export function SlotPicker({ listingId, acceptingVisits }: { listingId: number; 
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const slots = useSlots(listingId);
+  const slots = useSlots(listingId, acceptingVisits);
 
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [hold, setHold] = useState<ActiveHold | null>(null);

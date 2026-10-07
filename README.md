@@ -44,4 +44,13 @@ ruff check . && ruff format --check .
 
 cd ../frontend
 npm run lint && npm run typecheck
+npm test                         # Vitest + React Testing Library
+
+# End-to-end, against the running Docker stack
+docker compose up --build -d --wait
+cd ../e2e
+npm ci && npx playwright install chromium
+npx playwright test
 ```
+
+CI (`.github/workflows/ci.yml`) runs all of the above on every push and pull request.

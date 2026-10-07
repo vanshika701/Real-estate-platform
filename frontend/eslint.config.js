@@ -23,4 +23,9 @@ export default tseslint.config(
       "@typescript-eslint/no-explicit-any": "error",
     },
   },
+  {
+    // Test helpers export components and fixtures together; fast refresh doesn't apply.
+    files: ["tests/**/*.{ts,tsx}"],
+    rules: { "react-refresh/only-export-components": "off" },
+  },
 );
