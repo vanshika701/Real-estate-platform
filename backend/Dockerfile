@@ -21,7 +21,11 @@ RUN groupadd --system app && useradd --system --gid app --home-dir /app app
 
 COPY --from=builder /opt/venv /opt/venv
 WORKDIR /app
+COPY --chown=app:app alembic.ini ./
+COPY --chown=app:app alembic ./alembic
+COPY --chown=app:app scripts ./scripts
 COPY --chown=app:app app ./app
+RUN chmod +x scripts/start.sh
 
 USER app
 EXPOSE 8000
@@ -29,4 +33,4 @@ EXPOSE 8000
 HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=5 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["./scripts/start.sh"]
