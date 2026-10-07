@@ -1,11 +1,13 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
-from app.api.routers import auth, health
+from app.api.routers import agent, auth, health, listings
 from app.core.config import get_settings
 from app.core.database import engine
 from app.core.errors import register_error_handlers
@@ -44,12 +46,19 @@ def create_app() -> FastAPI:
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=["X-Cache", "X-Request-ID", "Retry-After"],
     )
     app.add_middleware(RequestLoggingMiddleware)
 
     register_error_handlers(app)
-    app.include_router(health.router, prefix=API_PREFIX)
-    app.include_router(auth.router, prefix=API_PREFIX)
+    for router in (health.router, auth.router, listings.router, agent.router):
+        app.include_router(router, prefix=API_PREFIX)
+
+    if not (settings.supabase_url and settings.supabase_key):
+        # Local-disk image fallback: serve uploaded files directly.
+        upload_dir = Path(settings.upload_dir)
+        upload_dir.mkdir(parents=True, exist_ok=True)
+        app.mount("/uploads", StaticFiles(directory=upload_dir), name="uploads")
     return app
 
 

@@ -25,7 +25,9 @@ COPY --chown=app:app alembic.ini ./
 COPY --chown=app:app alembic ./alembic
 COPY --chown=app:app scripts ./scripts
 COPY --chown=app:app app ./app
-RUN chmod +x scripts/start.sh
+# The uploads dir must exist and be owned by `app` before a volume is mounted over it,
+# so Docker initialises the volume with the right ownership.
+RUN chmod +x scripts/start.sh && mkdir -p uploads && chown app:app uploads
 
 USER app
 EXPOSE 8000

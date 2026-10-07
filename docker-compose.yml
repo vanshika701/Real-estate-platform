@@ -46,6 +46,8 @@ services:
       SUPABASE_URL: ${SUPABASE_URL:-}
       SUPABASE_KEY: ${SUPABASE_KEY:-}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
+    volumes:
+      - uploads:/app/uploads  # local image storage survives container rebuilds
     ports:
       - "8000:8000"
     depends_on:
@@ -64,3 +66,4 @@ services:
 
 volumes:
   postgres_data:
+  uploads:

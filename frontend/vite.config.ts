@@ -14,6 +14,7 @@ export default defineConfig(({ mode }) => {
       // needs to know the backend host and CORS only matters for split deployments.
       proxy: {
         "/api": { target: apiTarget, changeOrigin: true, ws: true },
+        "/uploads": { target: apiTarget, changeOrigin: true },
       },
     },
   };

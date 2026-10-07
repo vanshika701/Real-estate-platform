@@ -35,8 +35,12 @@ class Settings(BaseSettings):
     )
 
     cache_enabled: bool = True
+    search_cache_ttl_seconds: int = 60
 
-    # Optional third-party services; local fallbacks are used when these are unset.
+    # Image uploads. Local disk is used unless both Supabase settings are present.
+    upload_dir: str = "uploads"
+    max_image_bytes: int = 5 * 1024 * 1024
+    max_images_per_listing: int = 10
     supabase_url: str | None = None
     supabase_key: str | None = None
     supabase_bucket: str = "listing-images"

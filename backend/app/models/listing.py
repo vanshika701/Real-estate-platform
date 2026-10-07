@@ -8,10 +8,12 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
     func,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -45,13 +47,19 @@ class Listing(TimestampMixin, Base):
         CheckConstraint("area_sqft > 0", name="area_positive"),
         CheckConstraint("latitude BETWEEN -90 AND 90", name="latitude_range"),
         CheckConstraint("longitude BETWEEN -180 AND 180", name="longitude_range"),
+        # City search is case-insensitive (WHERE lower(city) = ...), so the index must be on
+        # lower(city); a plain index on city could not serve that query.
+        Index("ix_listings_city_lower", text("lower(city)")),
     )
+    # Fetch server-side values (updated_at, created_at) via RETURNING on every write; otherwise
+    # reading them after an update would trigger a lazy load, which async SQLAlchemy forbids.
+    __mapper_args__ = {"eager_defaults": True}  # noqa: RUF012 - SQLAlchemy's declared API
 
     id: Mapped[int] = mapped_column(primary_key=True)
     agent_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     title: Mapped[str] = mapped_column(String(200))
     description: Mapped[str] = mapped_column(Text)
-    city: Mapped[str] = mapped_column(String(100), index=True)
+    city: Mapped[str] = mapped_column(String(100))
     locality: Mapped[str] = mapped_column(String(100))
     address: Mapped[str] = mapped_column(String(300))
     latitude: Mapped[float] = mapped_column(Float)
