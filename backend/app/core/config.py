@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     cache_enabled: bool = True
     search_cache_ttl_seconds: int = 60
 
+    slot_hold_seconds: int = 300
+
     # Image uploads. Local disk is used unless both Supabase settings are present.
     upload_dir: str = "uploads"
     max_image_bytes: int = 5 * 1024 * 1024

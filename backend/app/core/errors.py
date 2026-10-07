@@ -6,6 +6,7 @@ import structlog
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from redis.exceptions import RedisError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 logger = structlog.get_logger(__name__)
@@ -65,6 +66,15 @@ async def _validation_error_handler(_: Request, exc: Exception) -> JSONResponse:
     return error_response(422, "validation_error", "; ".join(parts))
 
 
+async def _redis_error_handler(request: Request, exc: Exception) -> JSONResponse:
+    # Features that need Redis to be correct (holds, login limits) fail closed with a 503, which
+    # tells clients the problem is temporary, rather than a generic 500.
+    logger.error("redis_unavailable", path=request.url.path, error=str(exc))
+    return error_response(
+        503, "service_unavailable", "A required service is temporarily unavailable"
+    )
+
+
 async def _unhandled_error_handler(request: Request, exc: Exception) -> JSONResponse:
     logger.exception("unhandled_error", path=request.url.path)
     return error_response(500, "internal_error", "An unexpected error occurred")
@@ -74,4 +84,5 @@ def register_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(AppError, _app_error_handler)
     app.add_exception_handler(StarletteHTTPException, _http_error_handler)
     app.add_exception_handler(RequestValidationError, _validation_error_handler)
+    app.add_exception_handler(RedisError, _redis_error_handler)
     app.add_exception_handler(Exception, _unhandled_error_handler)

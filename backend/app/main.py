@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.api.routers import agent, auth, health, listings
+from app.api.routers import agent, auth, bookings, health, listings, slots
 from app.core.config import get_settings
 from app.core.database import engine
 from app.core.errors import register_error_handlers
@@ -51,7 +51,15 @@ def create_app() -> FastAPI:
     app.add_middleware(RequestLoggingMiddleware)
 
     register_error_handlers(app)
-    for router in (health.router, auth.router, listings.router, agent.router):
+    routers = (
+        health.router,
+        auth.router,
+        listings.router,
+        slots.router,
+        bookings.router,
+        agent.router,
+    )
+    for router in routers:
         app.include_router(router, prefix=API_PREFIX)
 
     if not (settings.supabase_url and settings.supabase_key):

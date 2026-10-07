@@ -7,7 +7,17 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token
-from app.models import Listing, ListingImage, ListingStatus, PropertyType, User, UserRole
+from app.models import (
+    AvailabilitySlot,
+    Booking,
+    BookingStatus,
+    Listing,
+    ListingImage,
+    ListingStatus,
+    PropertyType,
+    User,
+    UserRole,
+)
 
 _ids = count(1)
 
@@ -59,6 +69,38 @@ async def make_listing(
     session.add(listing)
     await session.commit()
     return listing
+
+
+def future_slot_start(days: int = 1, hour: int = 10) -> datetime:
+    """A whole-hour UTC time `days` from now, safely in the future."""
+    base = datetime.now(UTC).replace(minute=0, second=0, microsecond=0)
+    return base.replace(hour=hour) + timedelta(days=days)
+
+
+async def make_slot(
+    session: AsyncSession, listing: Listing, start: datetime, hours: int = 1
+) -> AvailabilitySlot:
+    slot = AvailabilitySlot(
+        listing_id=listing.id, slot_start=start, slot_end=start + timedelta(hours=hours)
+    )
+    session.add(slot)
+    await session.commit()
+    return slot
+
+
+async def make_booking(
+    session: AsyncSession,
+    listing: Listing,
+    buyer: User,
+    slot_start: datetime,
+    status: BookingStatus = BookingStatus.PENDING,
+) -> Booking:
+    booking = Booking(
+        listing_id=listing.id, buyer_id=buyer.id, slot_start=slot_start, status=status
+    )
+    session.add(booking)
+    await session.commit()
+    return booking
 
 
 def listing_payload(**overrides: Any) -> dict[str, Any]:
