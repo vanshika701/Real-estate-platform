@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Annotated, Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 DEV_JWT_SECRET = "dev-only-insecure-secret-change-me"  # noqa: S105
@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
 
     database_url: str = "postgresql+asyncpg://propvisit:propvisit@localhost:5432/propvisit"
+    # Hosted Postgres poolers cap client connections (Supabase's free session pooler allows
+    # ~15), so keep pool_size + max_overflow under that cap.
+    db_pool_size: int = 5
+    db_max_overflow: int = 5
     redis_url: str = "redis://localhost:6379/0"
 
     jwt_secret: str = DEV_JWT_SECRET
@@ -49,8 +53,21 @@ class Settings(BaseSettings):
     resend_api_key: str | None = None
     email_from: str = "PropVisit <noreply@propvisit.dev>"
     email_queue_name: str = "emails"
+    # How often RQ's scheduler (which runs delayed retries) polls Redis. RQ's default of 1s
+    # costs ~4 commands/s, far beyond a metered Redis like Upstash's free tier.
+    rq_scheduler_interval_seconds: int = Field(default=1, ge=1)
     # Public frontend URL, used for links inside emails.
     app_url: str = "http://localhost:5173"
+
+    @field_validator("database_url")
+    @classmethod
+    def _use_asyncpg_driver(cls, url: str) -> str:
+        """Accept the plain postgres:// URLs that hosting providers hand out."""
+        for prefix in ("postgres://", "postgresql://"):
+            if url.startswith(prefix):
+                url = "postgresql+asyncpg://" + url.removeprefix(prefix)
+        # asyncpg calls libpq's `sslmode` option `ssl`.
+        return url.replace("sslmode=", "ssl=")
 
     @model_validator(mode="before")
     @classmethod

@@ -1,0 +1,70 @@
+# Render Blueprint: the backend API (with the email worker embedded, free tier).
+# Postgres + Storage live on Supabase and Redis on Upstash; see docs/DEPLOYMENT.md.
+# Secrets marked `sync: false` are entered in the Render dashboard, never committed.
+services:
+  - type: web
+    name: propvisit-api
+    runtime: docker
+    plan: free
+    # Same region as Supabase and Upstash: the API makes several DB/Redis round trips per
+    # request, so API↔data latency matters more than browser↔API latency.
+    region: singapore
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    # Liveness only. /health pings Postgres and Redis, which would spend the Redis quota.
+    healthCheckPath: /api/v1/health/live
+    # Deploy only after GitHub Actions passes on the commit.
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false # Supabase session pooler URI
+      - key: REDIS_URL
+        sync: false # Upstash rediss:// URL
+      - key: CORS_ORIGINS
+        sync: false # https://<your-app>.vercel.app
+      - key: APP_URL
+        sync: false # same as CORS_ORIGINS, used for links in emails
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false # service_role key: server-side only
+      - key: SUPABASE_BUCKET
+        value: listing-images
+      - key: RESEND_API_KEY
+        sync: false # optional: emails are logged when unset
+      - key: EMAIL_FROM
+        value: PropVisit <onboarding@resend.dev>
+      - key: SEED_ON_START
+        value: "true" # idempotent: creates the demo data once, then skips
+      - key: RUN_EMBEDDED_WORKER
+        value: "true"
+      - key: RQ_SCHEDULER_INTERVAL_SECONDS
+        value: "60" # scheduler: ~170k Redis commands/month instead of ~10M at RQ's 1s default
+      - key: FORWARDED_ALLOW_IPS
+        value: "*" # trust Render's proxy for client IPs in logs (read by uvicorn)
+
+  # Upgrade path (~$7/month): run the worker as its own service so email jobs never compete
+  # with API requests for CPU, then set RUN_EMBEDDED_WORKER=false on the API above.
+  # - type: worker
+  #   name: propvisit-worker
+  #   runtime: docker
+  #   plan: starter
+  #   region: singapore
+  #   dockerfilePath: ./backend/Dockerfile
+  #   dockerContext: ./backend
+  #   dockerCommand: python -m app.workers.run
+  #   envVars:
+  #     - key: APP_ENV
+  #       value: production
+  #     - key: JWT_SECRET
+  #       sync: false
+  #     - key: REDIS_URL
+  #       sync: false
+  #     - key: RESEND_API_KEY
+  #       sync: false
+  #     - key: RQ_SCHEDULER_INTERVAL_SECONDS
+  #       value: "60"

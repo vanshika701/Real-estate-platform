@@ -18,3 +18,13 @@ async def health(session: DbSession, redis: RedisClient, response: Response) -> 
         # 503 lets Docker/Render health checks and load balancers react without parsing the body.
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
     return result
+
+
+@router.get("/health/live")
+async def liveness() -> dict[str, str]:
+    """Is the process up? Touches neither Postgres nor Redis.
+
+    Platform health checks poll every few seconds; pointing them at /health would spend a
+    metered Redis quota on pings, and restarting the API can't fix a database outage anyway.
+    """
+    return {"status": "ok"}

@@ -28,6 +28,16 @@ async def test_health_returns_503_when_redis_is_down(client: AsyncClient) -> Non
     assert body["checks"] == {"database": "ok", "redis": "error"}
 
 
+async def test_liveness_does_not_touch_dependencies(client: AsyncClient) -> None:
+    # Redis being down must not fail liveness: that's /health's job.
+    app.dependency_overrides[get_redis] = lambda: _UnreachableRedis()
+
+    response = await client.get("/api/v1/health/live")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
 async def test_unknown_route_uses_error_shape(client: AsyncClient) -> None:
     response = await client.get("/api/v1/does-not-exist")
 

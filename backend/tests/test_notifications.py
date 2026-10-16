@@ -1,11 +1,12 @@
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import httpx
 import pytest
 from httpx import AsyncClient, Response
 from rq import Queue, SimpleWorker
+from rq.job import JobStatus
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_booking_notifier
@@ -18,6 +19,7 @@ from app.services.agent_events import AgentEventPublisher
 from app.services.email import EmailMessage, ResendEmailSender
 from app.services.notifications import BookingNotifier
 from app.workers.email_jobs import send_email
+from app.workers.run import PacedWorker
 from tests.factories import auth_headers, future_slot_start, make_listing, make_slot, make_user
 
 
@@ -141,6 +143,26 @@ async def test_worker_runs_queued_jobs_through_the_email_sender(
 
     assert sorted(m.to for m in sent) == sorted([world.buyer.email, world.agent.email])
     assert email_queue.count == 0
+
+
+def test_paced_worker_scheduler_uses_configured_interval_and_runs_due_retries(
+    email_queue: Queue, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(get_settings(), "rq_scheduler_interval_seconds", 60)
+    monkeypatch.setattr(get_settings(), "resend_api_key", None)
+    # A retry whose delay has passed sits in the scheduled registry until the scheduler moves it.
+    message = {"to": "a@b.com", "subject": "Hi", "text": "Hello", "html": "<p>Hello</p>"}
+    job = email_queue.enqueue_at(datetime.now(UTC) - timedelta(seconds=1), send_email, message)
+
+    class InProcessPacedWorker(SimpleWorker, PacedWorker):
+        """SimpleWorker's no-fork job execution first in the MRO, PacedWorker's scheduler."""
+
+    worker = InProcessPacedWorker([email_queue], connection=email_queue.connection)
+    worker.work(burst=True, with_scheduler=True)
+
+    assert worker.scheduler is not None
+    assert worker.scheduler.interval == 60
+    assert job.get_status(refresh=True) == JobStatus.FINISHED
 
 
 def test_console_sender_is_used_without_resend_key(monkeypatch: pytest.MonkeyPatch) -> None:

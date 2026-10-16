@@ -54,3 +54,7 @@ npx playwright test
 ```
 
 CI (`.github/workflows/ci.yml`) runs all of the above on every push and pull request.
+
+## Deployment
+
+Vercel (frontend), Render (API + worker), Supabase (Postgres + storage) and Upstash (Redis), all on free tiers. Step-by-step guide: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
